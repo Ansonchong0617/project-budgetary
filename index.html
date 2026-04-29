@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Budgetary Calculator</title>
+    <!-- External Libraries for Browser-side DOCX generation -->
+    <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 2em;
+        }
+
+        .logo {
+            height: 60px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        #add-forklift { background-color: #e67e22; color: white; }
+        #add-asrs { background-color: #3498db; color: white; }
+        #add-4ws { background-color: #2ecc71; color: white; }
+        #calculate-btn { background-color: #2c3e50; color: white; width: 100%; font-size: 1.2em; margin-top: 20px; }
+        #generate-yes { background-color: #27ae60; color: white; }
+        #generate-no { background-color: #c0392b; color: white; }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .model-entry {
+            border: 1px solid #e0e0e0;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            position: relative;
+            background-color: #fafafa;
+        }
+
+        .model-entry h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: #e74c3c;
+            color: white;
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccd1d9;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .form-group input:disabled {
+            background-color: #f5f5f5;
+            color: #777;
+        }
+
+        .result-box {
+            margin-top: 40px;
+            padding: 30px;
+            background-color: #f8fbff;
+            border: 1px solid #d0e3ff;
+            border-radius: 8px;
+        }
+
+        .working-details {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .model-summary {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ccc;
+        }
+
+        .total-highlight {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+        }
+
+        .budgetary-highlight {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #c0392b;
+            margin-top: 20px;
+        }
+
+        .margin-input-box {
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        #thank-you {
+            text-align: center;
+            font-size: 1.2em;
+            color: #27ae60;
+            padding: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .header-section { flex-direction: column; text-align: center; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1>Budgetary Calculator</h1>
+            <img src="https://sc01.alicdn.com/kf/S1ad7082825a8483d96e9fd8d2d1d2206Q.png" alt="SIASUN Logo" class="logo">
+        </div>
+        
+        <div class="controls">
+            <button id="add-forklift">Add Forklift AGV/ AGV/AMR</button>
+            <button id="add-asrs">Add ASRS - Stacker Crane</button>
+            <button id="add-4ws">Add ASRS - 4Ways Shuttle</button>
+        </div>
+
+        <div id="models-container"></div>
+
+        <div class="actions">
+            <button id="calculate-btn">Calculate Project Cost</button>
+        </div>
+
+        <div id="result" class="result-box" style="display: none;">
+            <div id="result-content"></div>
+            <div id="report-prompt" style="display: none; margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                <p style="font-weight: bold; font-size: 1.1em;">Do you want to generate a Word report?</p>
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <button id="generate-yes">Yes, Download DOCX</button>
+                    <button id="generate-no">No, Just Thank You</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="thank-you" style="display: none;">
+            Thank you for using the SIASUN Budgetary Calculator!
+        </div>
+    </div>
+
+    <script>
+        const modelData = {
+            "Forklift AGV/ AGV/AMR": {
+                dropdown: [
+                    { name: "Forklift AGV (<11m, 2.5Ton - Rack Storage)", price: 550000 },
+                    { name: "Forklift AGV (<1.6m, <1.5Ton - Conveyor/ Open Pallet)", price: 110000 },
+                    { name: "Forklift AGV (<3.0m, <1.5Ton - Conveyor/ Closed Pallet)", price: 130000 },
+                    { name: "E AGV (<1Ton, Floor Transfer)", price: 120000 },
+                    { name: "AMR (<600kg, On the Rack Transfer)", price: 82000 }
+                ],
+                items: [
+                    { name: "AGV Traffic Control Tower", price: 60000, type: "yesno" },
+                    { name: "Battery Charger", price: 10000, type: "auto_charger" }
+                ],
+                installation: 0.20,
+                projectManagement: 0.05
+            },
+            "ASRS - Stacker Crane": {
+                dropdown: [
+                    { name: "Stacker Crane, High (>30m)", price: 700000 },
+                    { name: "Stacker Crane, Mid (>30m)", price: 350000 }
+                ],
+                items: [
+                    { name: "Racking - Pallet Position", price: 400, uom: "Per Unit" },
+                    { name: "WMS/WCS Software System", price: 700000, fixed: true },
+                    { name: "Conveyor system", price: 4500, uom: "Per meter" },
+                    { name: "Inbound/Outbound Station", price: 17000, uom: "Per Unit" },
+                    { name: "Electrical Control System", price: 100000, fixed: true }
+                ],
+                installation: 0.13,
+                projectManagement: 0.08
+            },
+            "ASRS - 4Ways Shuttle": {
+                dropdown: [],
+                items: [
+                    { name: "Four Way Shuttle", price: 65000, uom: "Per Unit" },
+                    { name: "Lifter System", price: 95000, uom: "Per Unit" },
+                    { name: "Racking - Pallet Position", price: 560, uom: "Per Unit" },
+                    { name: "Conveyor system", price: 4500, uom: "Per meter" },
+                    { name: "Inbound/Outbound Station", price: 14000, uom: "Per Unit" },
+                    { name: "Electrical Control System", price: 100000, fixed: true },
+                    { name: "WMS/WCS Software System", price: 350000, fixed: true }
+                ],
+                installation: 0.10,
+                projectManagement: 0.08
+            }
+        };
+
+        const modelsContainer = document.getElementById('models-container');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const resultContent = document.getElementById('result-content');
+        const resultBox = document.getElementById('result');
+        const reportPrompt = document.getElementById('report-prompt');
+        const thankYou = document.getElementById('thank-you');
+
+        let activeModels = [];
+        let calculationResult = null;
+
+        function addModel(modelType) {
+            const modelId = Date.now();
+            const data = modelData[modelType];
+            
+            const div = document.createElement('div');
+            div.className = 'model-entry';
+            div.id = `model-${modelId}`;
+            
+            let html = `
+                <button class="remove-btn" onclick="removeModel(${modelId})">Remove</button>
+                <h3>${modelType}</h3>
+                <div class="form-grid">
+            `;
+            
+            if (data.dropdown.length > 0) {
+                html += `
+                    <div class="form-group">
+                        <label>Choose Option:</label>
+                        <select class="dropdown-select">
+                            <option value="">-- Select --</option>
+                            ${data.dropdown.map(opt => `<option value="${opt.name}">${opt.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity (Number):</label>
+                        <input type="number" class="dropdown-qty" placeholder="Enter number" min="1">
+                    </div>
+                `;
+            }
+            
+            data.items.forEach((item) => {
+                if (item.fixed) {
+                    html += `
+                        <div class="form-group">
+                            <label>${item.name}:</label>
+                            <input type="text" class="item-qty" data-name="${item.name}" value="1" disabled>
+                        </div>
+                    `;
+                } else if (item.type === "yesno") {
+                    html += `
+                        <div class="form-group">
+                            <label>${item.name}:</label>
+                            <select class="item-qty-select" data-name="${item.name}">
+                                <option value="no">No</option>
+                                <option value="yes">Yes</option>
+                            </select>
+                        </div>
+                    `;
+                } else if (item.type === "auto_charger") {
+                    html += `
+                        <div class="form-group">
+                            <label>${item.name}:</label>
+                            <input type="text" class="item-qty-auto" data-name="${item.name}" value="Auto-calculated (1 per 4 units)" disabled>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="form-group">
+                            <label>${item.name} (${item.uom}):</label>
+                            <input type="number" class="item-qty" data-name="${item.name}" placeholder="Enter quantity" min="0">
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `</div>`;
+            div.innerHTML = html;
+            modelsContainer.appendChild(div);
+            activeModels.push({ id: modelId, type: modelType });
+        }
+
+        function removeModel(id) {
+            const el = document.getElementById(`model-${id}`);
+            if (el) el.remove();
+            activeModels = activeModels.filter(m => m.id !== id);
+        }
+
+        document.getElementById('add-forklift').onclick = () => addModel('Forklift AGV/ AGV/AMR');
+        document.getElementById('add-asrs').onclick = () => addModel('ASRS - Stacker Crane');
+        document.getElementById('add-4ws').onclick = () => addModel('ASRS - 4Ways Shuttle');
+
+        calculateBtn.onclick = () => {
+            if (activeModels.length === 0) {
+                alert("Please add at least one model.");
+                return;
+            }
+
+            let totalProjectCost = 0;
+            let details = [];
+            let isValid = true;
+
+            activeModels.forEach(model => {
+                const div = document.getElementById(`model-${model.id}`);
+                const data = modelData[model.type];
+                let modelSubtotal = 0;
+                let modelItems = [];
+                let selectionQty = 0;
+
+                if (data.dropdown.length > 0) {
+                    const dropdown = div.querySelector('.dropdown-select').value;
+                    const qtyStr = div.querySelector('.dropdown-qty').value;
+                    
+                    if (dropdown && qtyStr) {
+                        const qty = parseFloat(qtyStr);
+                        if (isNaN(qty) || qty <= 0) {
+                            isValid = false;
+                            alert(`Invalid quantity for ${model.type} selected option.`);
+                        } else {
+                            selectionQty = qty;
+                            const option = data.dropdown.find(o => o.name === dropdown);
+                            const sub = qty * option.price;
+                            modelSubtotal += sub;
+                            modelItems.push({ name: dropdown, qty, price: option.price, subtotal: sub });
+                        }
+                    } else if (dropdown || qtyStr) {
+                        isValid = false;
+                        alert(`Please provide both selection and quantity for ${model.type}.`);
+                    }
+                }
+
+                const itemInputs = div.querySelectorAll('.item-qty');
+                itemInputs.forEach(input => {
+                    const qtyStr = input.value;
+                    if (qtyStr) {
+                        const qty = parseFloat(qtyStr);
+                        if (isNaN(qty)) {
+                            isValid = false;
+                        } else {
+                            const itemName = input.dataset.name;
+                            const item = data.items.find(i => i.name === itemName);
+                            const sub = qty * item.price;
+                            modelSubtotal += sub;
+                            modelItems.push({ name: itemName, qty, price: item.price, subtotal: sub });
+                        }
+                    }
+                });
+
+                const itemSelects = div.querySelectorAll('.item-qty-select');
+                itemSelects.forEach(select => {
+                    const val = select.value;
+                    const itemName = select.dataset.name;
+                    const item = data.items.find(i => i.name === itemName);
+                    const qty = (val === "yes" ? 1 : 0);
+                    if (qty > 0) {
+                        const sub = qty * item.price;
+                        modelSubtotal += sub;
+                        modelItems.push({ name: itemName, qty, price: item.price, subtotal: sub });
+                    }
+                });
+
+                if (model.type === "Forklift AGV/ AGV/AMR" && selectionQty > 0) {
+                    const chargerItem = data.items.find(i => i.type === "auto_charger");
+                    const chargerQty = Math.ceil(selectionQty / 4);
+                    const chargerSub = chargerQty * chargerItem.price;
+                    modelSubtotal += chargerSub;
+                    modelItems.push({ name: chargerItem.name, qty: chargerQty, price: chargerItem.price, subtotal: chargerSub });
+                }
+
+                const divisor = 1 - data.installation - data.projectManagement;
+                const modelTotal = modelSubtotal / divisor;
+                const install = modelTotal * data.installation;
+                const mgmt = modelTotal * data.projectManagement;
+
+                details.push({
+                    type: model.type,
+                    items: modelItems,
+                    subtotal: modelSubtotal,
+                    installation: install,
+                    management: mgmt,
+                    total: modelTotal
+                });
+
+                totalProjectCost += modelTotal;
+            });
+
+            if (!isValid) return;
+
+            calculationResult = { details, totalProjectCost };
+            
+            let resHtml = `<h3>Calculation Working Details</h3>`;
+            details.forEach(d => {
+                resHtml += `
+                    <div class="model-summary">
+                        <strong>${d.type}</strong><br>
+                        ${d.items.map(i => `&nbsp;&nbsp;• ${i.name}: ${i.qty} Unit(s) = MYR ${i.subtotal.toLocaleString()}`).join('<br>')}
+                        <br>&nbsp;&nbsp;Equipment Subtotal: MYR ${d.subtotal.toLocaleString()}
+                        <br>&nbsp;&nbsp;Installation (${(modelData[d.type].installation*100)}% of Total): MYR ${d.installation.toLocaleString()}
+                        <br>&nbsp;&nbsp;Project Mgmt (${(modelData[d.type].projectManagement*100)}% of Total): MYR ${d.management.toLocaleString()}
+                        <br><strong>System Total: MYR ${d.total.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                    </div>
+                `;
+            });
+            
+            resHtml += `<div class="total-highlight">Combined Project Cost: MYR ${totalProjectCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>`;
+            
+            resHtml += `
+                <div class="margin-input-box">
+                    <label>Enter Profit Margin (%):</label>
+                    <input type="number" id="profit-margin" placeholder="e.g. 20" min="0">
+                    <button id="calc-budgetary-btn" style="margin-top: 15px; background-color: #27ae60; color: white; width: 100%;">Calculate Final Budgetary Price</button>
+                </div>
+                <div id="final-budgetary-result" class="budgetary-highlight"></div>
+            `;
+            
+            resultContent.innerHTML = resHtml;
+            resultBox.style.display = 'block';
+            reportPrompt.style.display = 'none';
+            thankYou.style.display = 'none';
+
+            document.getElementById('calc-budgetary-btn').onclick = () => {
+                const marginStr = document.getElementById('profit-margin').value;
+                const marginPercent = parseFloat(marginStr);
+                if (isNaN(marginPercent)) {
+                    alert("Please enter a valid profit margin percentage.");
+                    return;
+                }
+
+                const marginAmount = totalProjectCost * (marginPercent / 100);
+                const finalBudgetary = totalProjectCost + marginAmount;
+                
+                calculationResult.profitMargin = marginPercent;
+                calculationResult.finalBudgetary = finalBudgetary;
+
+                document.getElementById('final-budgetary-result').innerHTML = `Final Budgetary Price: MYR ${finalBudgetary.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                reportPrompt.style.display = 'block';
+            };
+        };
+
+        document.getElementById('generate-yes').onclick = async () => {
+            if (!calculationResult) return;
+            
+            const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType } = docx;
+
+            const children = [];
+
+            // Title
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: "Budgetary Quote", bold: true, size: 48, font: "Calibri" })
+                ],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 600 }
+            }));
+
+            // Project Details
+            calculationResult.details.forEach(model => {
+                children.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: model.type + "：", bold: true, size: 32, font: "Calibri", underline: { type: UnderlineType.SINGLE } })
+                    ],
+                    spacing: { before: 300, after: 150 }
+                }));
+
+                model.items.forEach(item => {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({ text: item.name + "  - ", font: "Calibri", size: 28 }),
+                            new TextRun({ text: item.qty + " Unit", color: "FF0000", bold: true, font: "Calibri", size: 28 })
+                        ],
+                        bullet: { level: 0 }
+                    }));
+                });
+            });
+
+            // Terms & Inclusions
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: "Remarks & Inclusions：", bold: true, size: 28, font: "Calibri", underline: { type: UnderlineType.SINGLE } })
+                ],
+                spacing: { before: 600, after: 100 }
+            }));
+
+            const remarks = [
+                "Include design, production, delivery (FOB), site installation, testing & commissioning.",
+                "System integration with existing host or client software.",
+                "Local support and maintenance.",
+                "Warranty : 12 months",
+                "Budgetary quote based on preliminary input and for high level referencing only."
+            ];
+
+            remarks.forEach(remark => {
+                children.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: remark, font: "Calibri", size: 24, italics: remark.includes("Budgetary quote") })
+                    ],
+                    bullet: { level: 0 }
+                }));
+            });
+
+            // Final Price
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: "Total Price：MYR ", bold: true, size: 36, font: "Calibri" }),
+                    new TextRun({ 
+                        text: calculationResult.finalBudgetary.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), 
+                        color: "FF0000", 
+                        bold: true, 
+                        size: 36,
+                        font: "Calibri"
+                    })
+                ],
+                spacing: { before: 600 }
+            }));
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: children,
+                }],
+            });
+
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, "Budgetary_Quote.docx");
+            
+            reportPrompt.style.display = 'none';
+            thankYou.style.display = 'block';
+        };
+
+        document.getElementById('generate-no').onclick = () => {
+            reportPrompt.style.display = 'none';
+            thankYou.style.display = 'block';
+        };
+    </script>
+</body>
+</html>
